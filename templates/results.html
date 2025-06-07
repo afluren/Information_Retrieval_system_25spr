@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>搜索结果</title></head>
+<body>
+  <h2>搜索结果 for "{{ query }}"</h2>
+  <ul>
+    {% for doc_id, score in results %}
+      <li>文档 {{ doc_id }} - 分数: {{ "%.4f"|format(score) }}</li>
+    {% else %}
+      <li>无结果</li>
+    {% endfor %}
+  </ul>
+  <a href="/">返回首页</a>
+</body>
+</html>

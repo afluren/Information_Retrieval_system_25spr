@@ -1,6 +1,5 @@
 # TODO：这里的向量空间模型不完全，未来可能会加除以向量长度的操作
 from inverted_index import tokenize as parse_query
-from wildcard_query import Trie
 from typing import List, Dict
 import sqlite3
 import pickle
@@ -13,14 +12,30 @@ MAX_PHRASE_LEN = 3
 TITLE_WEIGHT = 3.0
 TEXT_WEIGHT = 1.0
 MAX_TOKENS_LEN = 100
-with open("inverted_index/doc_info.pkl", "rb") as f:
-    doc_info = pickle.load(f)
-with open("inverted_index_title/token_to_id.pkl", "rb") as f:
-    token_to_id = pickle.load(f)
-with open("trie.pkl", "rb") as f:
-    trie = pickle.load(f)
-with open("reversed_trie.pkl", "rb") as f:
-    reversed_trie = pickle.load(f)
+
+doc_info = None
+token_to_id = None
+trie = None
+reversed_trie = None
+
+
+def lazy_load():
+    global doc_info, token_to_id, trie, reversed_trie
+    from wildcard_query import Trie
+    if doc_info is None:
+        with open("inverted_index/doc_info.pkl", "rb") as f:
+            doc_info = pickle.load(f)
+    if token_to_id is None:
+        with open("inverted_index_title/token_to_id.pkl", "rb") as f:
+            token_to_id = pickle.load(f)
+    if trie is None:
+        with open("trie.pkl", "rb") as f:
+            trie = pickle.load(f)
+            trie = Trie(trie)
+    if reversed_trie is None:
+        with open("reversed_trie.pkl", "rb") as f:
+            reversed_trie = pickle.load(f)
+            reversed_trie = Trie(reversed_trie)
 
 
 def get_freq_from_text(query_tokens: List[str]) -> Dict:
@@ -245,6 +260,17 @@ def wildcard_query(pattern: str):
                     scores[doc_id] += score_i
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return sorted_scores
+
+
+def query(query_string: str, top_k=6):
+    lazy_load()
+    if "\"" in query_string:
+        sorted_scores = phrase_query(query_string)
+    elif "*" in query_string or "?" in query_string:
+        sorted_scores = wildcard_query(query_string)
+    else:
+        sorted_scores = text_query(query_string)
+    return sorted_scores[:top_k]
 
 
 if __name__ == "__main__":
